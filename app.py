@@ -1,29 +1,19 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import cv2
 from PIL import Image
-import io
 import os
-from pathlib import Path
 
 # Page configuration
 st.set_page_config(
     page_title="Kidney Disease Classifier",
     page_icon="🫁",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
-# Clean and professional CSS
+# Simple CSS
 st.markdown("""
 <style>
-    /* Clean, medical-grade styling */
-    .main {
-        background: #f8f9fa;
-    }
-    
-    /* Professional header */
     .header {
         background: linear-gradient(90deg, #2c3e50 0%, #3498db 100%);
         padding: 2rem;
@@ -31,22 +21,8 @@ st.markdown("""
         margin-bottom: 2rem;
         text-align: center;
         color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     
-    .header h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-    }
-    
-    .header p {
-        font-size: 1.1rem;
-        margin: 0.5rem 0 0 0;
-        opacity: 0.9;
-    }
-    
-    /* Clean cards */
     .card {
         background: white;
         border-radius: 10px;
@@ -56,145 +32,24 @@ st.markdown("""
         border: 1px solid #e9ecef;
     }
     
-    .card-title {
-        font-size: 1.4rem;
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #3498db;
-    }
-    
-    /* Upload area */
-    .upload-area {
-        border: 2px dashed #3498db;
-        border-radius: 8px;
-        padding: 2rem;
-        text-align: center;
-        background: #f8f9fa;
-        transition: all 0.3s ease;
-    }
-    
-    .upload-area:hover {
-        border-color: #2980b9;
-        background: #e3f2fd;
-    }
-    
-    /* Results display */
-    .result-card {
+    .result-box {
         background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
         color: white;
         border-radius: 10px;
         padding: 2rem;
         text-align: center;
-        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-    }
-    
-    .result-title {
-        font-size: 1.6rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-    }
-    
-    .result-value {
-        font-size: 2.5rem;
-        font-weight: 700;
         margin: 1rem 0;
     }
     
-    .confidence-display {
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin: 1rem 0;
-        padding: 1rem;
-        background: rgba(255,255,255,0.2);
-        border-radius: 8px;
-    }
-    
-    /* Probability bars */
-    .prob-bar {
-        background: rgba(255,255,255,0.2);
-        border-radius: 5px;
-        padding: 0.8rem;
-        margin: 0.5rem 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .prob-label {
-        font-weight: 600;
-        color: white;
-    }
-    
-    .prob-value {
-        font-weight: 700;
-        color: white;
-    }
-    
-    /* Status indicators */
-    .status-high {
-        background: #27ae60;
-        color: white;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-        margin: 1rem 0;
-    }
-    
-    .status-medium {
-        background: #f39c12;
-        color: white;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-        margin: 1rem 0;
-    }
-    
-    .status-low {
-        background: #e74c3c;
-        color: white;
-        padding: 1rem;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: 600;
-        margin: 1rem 0;
-    }
-    
-    /* Sidebar styling */
-    .sidebar-content {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .sidebar-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #3498db;
-    }
-    
-    /* Footer */
-    .footer {
-        text-align: center;
-        color: #6c757d;
-        margin-top: 3rem;
-        padding: 2rem 0;
-        border-top: 1px solid #dee2e6;
-    }
+    .status-high { background: #27ae60; color: white; padding: 1rem; border-radius: 8px; text-align: center; margin: 1rem 0; }
+    .status-medium { background: #f39c12; color: white; padding: 1rem; border-radius: 8px; text-align: center; margin: 1rem 0; }
+    .status-low { background: #e74c3c; color: white; padding: 1rem; border-radius: 8px; text-align: center; margin: 1rem 0; }
 </style>
 """, unsafe_allow_html=True)
 
 @st.cache_resource
 def load_model():
-    """Load the trained model with caching for better performance."""
+    """Load the trained model."""
     try:
         model_path = "kidney_disease_classifier_v2.h5"
         if not os.path.exists(model_path):
@@ -208,25 +63,21 @@ def load_model():
         return None
 
 def preprocess_image(image, target_size=(128, 128)):
-    """
-    Preprocess the image for prediction.
-    Args:
-        image: PIL Image or numpy array
-        target_size: Target size for resizing
-    Returns:
-        np.array: Preprocessed image
-    """
+    """Preprocess the image for prediction."""
     try:
-        # Convert PIL Image to numpy array if needed
+        # Convert PIL Image to numpy array
         if isinstance(image, Image.Image):
             image = np.array(image)
         
         # Convert to RGB if needed
         if len(image.shape) == 3 and image.shape[2] == 4:
-            image = cv2.cvtColor(image, cv2.COLOR_RGBA2RGB)
+            # Convert RGBA to RGB
+            image = image[:, :, :3]
         
-        # Resize image
-        image = cv2.resize(image, target_size)
+        # Resize image using PIL (more reliable than cv2)
+        pil_image = Image.fromarray(image)
+        pil_image = pil_image.resize(target_size)
+        image = np.array(pil_image)
         
         # Normalize
         image = image / 255.0
@@ -240,14 +91,7 @@ def preprocess_image(image, target_size=(128, 128)):
         return None
 
 def predict_image_class(image, model):
-    """
-    Predict the class label for the given image.
-    Args:
-        image: Preprocessed image
-        model: Trained model
-    Returns:
-        tuple: (predicted_class, confidence_score, all_probabilities)
-    """
+    """Predict the class label for the given image."""
     try:
         predictions = model.predict(image, verbose=0)
         predicted_class_index = np.argmax(predictions, axis=1)[0]
@@ -271,7 +115,7 @@ def predict_image_class(image, model):
         return None, None, None
 
 def main():
-    # Clean header
+    # Header
     st.markdown("""
     <div class="header">
         <h1>🫁 Kidney Disease Classifier</h1>
@@ -281,8 +125,7 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.markdown('<div class="sidebar-content">', unsafe_allow_html=True)
-        st.markdown('<div class="sidebar-title">📋 About</div>', unsafe_allow_html=True)
+        st.markdown("## 📋 About")
         st.markdown("""
         This application uses deep learning to classify kidney CT scans:
         
@@ -294,7 +137,7 @@ def main():
         **Accuracy**: 98.71%
         """)
         
-        st.markdown('<div class="sidebar-title">🔧 Technical Details</div>', unsafe_allow_html=True)
+        st.markdown("## 🔧 Technical Details")
         st.markdown("""
         - **Model**: MobileNetV2
         - **Input**: 128×128 pixels
@@ -302,27 +145,24 @@ def main():
         - **Framework**: TensorFlow
         """)
         
-        st.markdown('<div class="sidebar-title">⚠️ Disclaimer</div>', unsafe_allow_html=True)
+        st.markdown("## ⚠️ Disclaimer")
         st.markdown("""
         For **educational purposes only**. 
         Always consult healthcare professionals.
         """)
-        st.markdown('</div>', unsafe_allow_html=True)
     
     # Main content
     col1, col2 = st.columns([1, 1])
     
     with col1:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">📤 Upload CT Scan</div>', unsafe_allow_html=True)
+        st.markdown("## 📤 Upload CT Scan")
         
-        st.markdown('<div class="upload-area">', unsafe_allow_html=True)
         uploaded_file = st.file_uploader(
             "Choose an image file",
             type=['png', 'jpg', 'jpeg', 'bmp', 'tiff'],
             help="Upload a CT scan image for analysis"
         )
-        st.markdown('</div>', unsafe_allow_html=True)
         
         # Display uploaded image
         if uploaded_file is not None:
@@ -341,7 +181,7 @@ def main():
     
     with col2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">🔍 Analysis Results</div>', unsafe_allow_html=True)
+        st.markdown("## 🔍 Analysis Results")
         
         if image_array is not None:
             # Load model
@@ -356,25 +196,21 @@ def main():
                     predicted_class, confidence, all_probabilities = predict_image_class(preprocessed_image, model)
                     
                     if predicted_class is not None:
-                        # Clean results display
-                        st.markdown('<div class="result-card">', unsafe_allow_html=True)
-                        st.markdown('<div class="result-title">🎯 Predicted Class</div>', unsafe_allow_html=True)
-                        st.markdown(f'<div class="result-value">{predicted_class}</div>', unsafe_allow_html=True)
+                        # Results display
+                        st.markdown('<div class="result-box">', unsafe_allow_html=True)
+                        st.markdown(f"### 🎯 Predicted Class: **{predicted_class}**")
                         
                         # Safe confidence display
                         confidence_display = confidence if np.isfinite(confidence) else 0.0
-                        st.markdown(f'<div class="confidence-display">Confidence: {confidence_display:.1%}</div>', unsafe_allow_html=True)
+                        st.markdown(f"### 📊 Confidence: **{confidence_display:.1%}**")
                         st.markdown('</div>', unsafe_allow_html=True)
                         
-                        # Class probabilities (no progress bars)
+                        # Class probabilities
                         st.markdown("### 📊 Class Probabilities")
                         class_labels = ['Cyst', 'Normal', 'Stone', 'Tumor']
                         
                         for i, (label, prob) in enumerate(zip(class_labels, all_probabilities)):
-                            st.markdown('<div class="prob-bar">', unsafe_allow_html=True)
-                            st.markdown(f'<span class="prob-label">{label}</span>', unsafe_allow_html=True)
-                            st.markdown(f'<span class="prob-value">{prob:.1%}</span>', unsafe_allow_html=True)
-                            st.markdown('</div>', unsafe_allow_html=True)
+                            st.write(f"**{label}**: {prob:.1%}")
                         
                         # Status indicator
                         if confidence > 0.8:
@@ -394,9 +230,10 @@ def main():
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # Clean footer
+    # Footer
+    st.markdown("---")
     st.markdown("""
-    <div class="footer">
+    <div style='text-align: center; color: #666;'>
         <p><strong>Built with Streamlit and TensorFlow</strong></p>
         <p>For educational purposes only</p>
     </div>
