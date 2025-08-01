@@ -276,15 +276,7 @@ def main():
             is_valid_ct, validation_message = validate_ct_scan(image_array)
             
             if not is_valid_ct:
-                st.markdown(f'<div class="error-box">❌ Invalid Image</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="warning-box">{validation_message}</div>', unsafe_allow_html=True)
-                st.markdown("""
-                **Please upload a valid CT scan image:**
-                - Medical CT scan images only
-                - Grayscale or limited color variation
-                - High contrast between tissues
-                - Proper medical imaging format
-                """)
+                st.markdown('<div class="error-box">❌ Invalid or unrelated image uploaded. Please upload a kidney CT scan.</div>', unsafe_allow_html=True)
             else:
                 # Load model
                 model = load_model()
