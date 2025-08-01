@@ -2,7 +2,7 @@
 streamlit
 tensorflow
 numpy
-opencv-python
+opencv-python-headless==4.8.1.78
 Pillow
 scikit-learn
 matplotlib
