@@ -290,29 +290,42 @@ def main():
                         predicted_class, confidence, all_probabilities = predict_image_class(preprocessed_image, model)
                         
                         if predicted_class is not None:
-                            # Results display
-                            st.markdown('<div class="result-box">', unsafe_allow_html=True)
-                            st.markdown(f"### 🎯 Predicted Class: **{predicted_class}**")
-                            
-                            # Safe confidence display
+                            # Check confidence threshold (0.7 = 70%)
+                            confidence_threshold = 0.7
                             confidence_display = confidence if np.isfinite(confidence) else 0.0
-                            st.markdown(f"### 📊 Confidence: **{confidence_display:.1%}**")
-                            st.markdown('</div>', unsafe_allow_html=True)
                             
-                            # Class probabilities
-                            st.markdown("### 📊 Class Probabilities")
-                            class_labels = ['Cyst', 'Normal', 'Stone', 'Tumor']
-                            
-                            for i, (label, prob) in enumerate(zip(class_labels, all_probabilities)):
-                                st.write(f"**{label}**: {prob:.1%}")
-                            
-                            # Status indicator
-                            if confidence > 0.8:
-                                st.markdown('<div class="status-high">✅ High Confidence Analysis</div>', unsafe_allow_html=True)
-                            elif confidence > 0.6:
-                                st.markdown('<div class="status-medium">⚠️ Medium Confidence Analysis</div>', unsafe_allow_html=True)
+                            if confidence_display < confidence_threshold:
+                                st.markdown('<div class="error-box">❌ Low confidence prediction. Please upload a clearer kidney CT scan image.</div>', unsafe_allow_html=True)
+                                st.markdown(f"""
+                                **Confidence Score: {confidence_display:.1%}** (Threshold: {confidence_threshold:.0%})
+                                
+                                The model is not confident enough to make a reliable prediction. This could be due to:
+                                - Poor image quality
+                                - Unclear or blurry CT scan
+                                - Image not showing kidney region clearly
+                                - Non-kidney CT scan
+                                """)
                             else:
-                                st.markdown('<div class="status-low">❌ Low Confidence Analysis</div>', unsafe_allow_html=True)
+                                # Results display
+                                st.markdown('<div class="result-box">', unsafe_allow_html=True)
+                                st.markdown(f"### 🎯 Predicted Class: **{predicted_class}**")
+                                st.markdown(f"### 📊 Confidence: **{confidence_display:.1%}**")
+                                st.markdown('</div>', unsafe_allow_html=True)
+                                
+                                # Class probabilities
+                                st.markdown("### 📊 Class Probabilities")
+                                class_labels = ['Cyst', 'Normal', 'Stone', 'Tumor']
+                                
+                                for i, (label, prob) in enumerate(zip(class_labels, all_probabilities)):
+                                    st.write(f"**{label}**: {prob:.1%}")
+                                
+                                # Status indicator
+                                if confidence > 0.8:
+                                    st.markdown('<div class="status-high">✅ High Confidence Analysis</div>', unsafe_allow_html=True)
+                                elif confidence > 0.7:
+                                    st.markdown('<div class="status-medium">✅ Confident Analysis</div>', unsafe_allow_html=True)
+                                else:
+                                    st.markdown('<div class="status-low">⚠️ Acceptable Confidence Analysis</div>', unsafe_allow_html=True)
                         else:
                             st.error("❌ Failed to analyze image")
                     else:
